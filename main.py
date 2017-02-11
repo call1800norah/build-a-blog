@@ -38,33 +38,30 @@ class MainBlogHandler(webapp2.RequestHandler):
     def get(self):
         posts = db.GqlQuery("SELECT * FROM Post order by created desc limit 5")
         t = jinja_env.get_template("main_blog.html")
-        content = t.render(posts=posts,error = self.request.get("error"))
+
+        content = t.render(posts=posts)
         self.response.write(content)
 
 class Handler(MainBlogHandler):
    def get(self):
-        self.redirect("/blog")
+
+       self.redirect('/blog')
 
 class ViewPostHandler(MainBlogHandler):
     def renderError(self, error_code):
         self.error(error_code)
         self.response.write("Oops! Something went wrong.")
     def get(self,id):
-        entity = Post.get_by_id(int(id))
+        post = Post.get_by_id(int(id))
         t = jinja_env.get_template("view.html")
-        content = t.render(entity=entity,error = self.request.get("error"))
+        content = t.render(post=post,error = self.request.get("error"))
 
-        if not entity:
-            self.renderError(400)
-            return
-
+        if not post:
+           self.renderError(400)
+           return
         self.response.write(content)
 
 class NewPostHandler(MainBlogHandler):
-    def renderError(self, error_code):
-        self.error(error_code)
-        self.response.write("We need both a subject and some contents in blog!")
-
     def get(self, title="", post="", error=""):
         t = jinja_env.get_template("new_posts.html")
         content = t.render(title=title,post=post,error=error)
@@ -75,23 +72,19 @@ class NewPostHandler(MainBlogHandler):
         post = self.request.get("post")
 
         if title and post:
-            p = Post(title=title,post=post)
-            p.put()
-            self.redirect('/blog/%s' % str(p.key().id()))
+            post = Post(title=title,post=post)
+            post.put()
+            self.redirect('/blog/%s' % str(post.key().id()))
         else:
             error = "We need both a title and a body!"
             t = jinja_env.get_template("new_posts.html")
             content = t.render(title=title,post=post,error=error)
             self.response.write(content)
 
-
-
-
-
 app = webapp2.WSGIApplication([
-        webapp2.Route('/',Handler),
-        webapp2.Route('/blog', MainBlogHandler),
+        ('/',Handler),
+        ('/blog', MainBlogHandler),
         webapp2.Route('/blog/<id:\d+>', ViewPostHandler),
-        webapp2.Route('/blog/newpost', NewPostHandler),
+        ('/blog/newpost', NewPostHandler),
 
       ], debug=True)
