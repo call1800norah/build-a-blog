@@ -2,4 +2,13 @@
 
 {% block content %}
 
+    <h1>blog!</h1>
+    {% for post in posts %}
+
+        <h2><a href="{{ post.key().id() }}">{{post.title}}</a></h2>
+
+        <p>{{post.post}}</p>
+
+    {% endfor %}
+
 {% endblock %}

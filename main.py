@@ -24,62 +24,74 @@ template_dir = os.path.join(os.path.dirname(__file__), "templates")
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
                                autoescape = True)
 
+def get_posts(limit, offset):
+    page = db.GqlQuery("SELECT * FROM Post order by created desc limit 5 offset 5")
+
 class Post(db.Model):
-    subject = db.StringProperty(required = True)
-    created = db.DateTimeProperty(auto_now_add = True)
-    content = db.TextProperty(required = True)
-    last_modified = db.DateTimeProperty(auto_now = True)
+    title = db.StringProperty(required = True)
+    created= db.DateTimeProperty(auto_now_add = True)
+    post = db.TextProperty(required = True)
+    #last_modified = db.DateTimeProperty(auto_now = True)
 
-class Handler(webapp2.RequestHandler):
-    def renderError(self, error_code):
-        self.error(error_code)
-        self.response.write("We need both a subject and some contents in blog!")
 
-class MainBlogHandler(handler):
+class MainBlogHandler(webapp2.RequestHandler):
     def get(self):
-       posts = db.GqlQuery("SELECT * FROM Post order bt created desc")
-       t = jinja_env.get_template("base.html")
-       content = t.render(posts=posts,error = self.request.get("error"))
-       self.response.write(content)
+        posts = db.GqlQuery("SELECT * FROM Post order by created desc limit 5")
+        t = jinja_env.get_template("main_blog.html")
+        content = t.render(posts=posts,error = self.request.get("error"))
+        self.response.write(content)
 
-class ViewPostHandler(webapp2.RequestHandler):
+class Handler(MainBlogHandler):
+   def get(self):
+        self.redirect("/blog")
+
+class ViewPostHandler(MainBlogHandler):
     def renderError(self, error_code):
         self.error(error_code)
-        self.response.write("We need both a subject and some contents in blog!")
-
+        self.response.write("Oops! Something went wrong.")
     def get(self,id):
-        key = Post.get_by_id(int(id))
+        entity = Post.get_by_id(int(id))
+        t = jinja_env.get_template("view.html")
+        content = t.render(entity=entity,error = self.request.get("error"))
 
-        if not key:
+        if not entity:
             self.renderError(400)
             return
 
-        self.response.write("new_blog.html",key = key)
+        self.response.write(content)
 
-class NewPostHandler(webapp2.RequestHandler):
-    def get(self,subject="",blog="",error=""):
+class NewPostHandler(MainBlogHandler):
+    def renderError(self, error_code):
+        self.error(error_code)
+        self.response.write("We need both a subject and some contents in blog!")
+
+    def get(self, title="", post="", error=""):
         t = jinja_env.get_template("new_posts.html")
-        content = t.render(subject=subject,blog=blog,error=error)
+        content = t.render(title=title,post=post,error=error)
         self.response.write(content)
 
     def post(self):
-        subject = self.request.get("subject")
-        blog = self.request.get("blog")
+        title = self.request.get("title")
+        post = self.request.get("post")
 
-        if subject and blog:
-            self.response.write("thanks!")
+        if title and post:
+            p = Post(title=title,post=post)
+            p.put()
+            self.redirect('/blog/%s' % str(p.key().id()))
         else:
-            error = "We need both a subject and some contents in blog!"
-            self.response.write(subject=subject,blog=blog,error=error)
+            error = "We need both a title and a body!"
+            t = jinja_env.get_template("new_posts.html")
+            content = t.render(title=title,post=post,error=error)
+            self.response.write(content)
 
 
 
 
 
 app = webapp2.WSGIApplication([
-       webapp2.Route('/', Handler),
-       webapp2.Route('/blog', MainBlogHandler),
-       webapp2.Route('/blog/<id:\d+>', ViewPostHandler),
-       webapp2.Route('/blog/newpost', NewPostHandler),
+        webapp2.Route('/',Handler),
+        webapp2.Route('/blog', MainBlogHandler),
+        webapp2.Route('/blog/<id:\d+>', ViewPostHandler),
+        webapp2.Route('/blog/newpost', NewPostHandler),
 
       ], debug=True)
