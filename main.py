@@ -15,7 +15,6 @@
 # limitations under the License.
 #
 import webapp2
-import cgi
 import jinja2
 import os
 from google.appengine.ext import db
@@ -24,15 +23,10 @@ template_dir = os.path.join(os.path.dirname(__file__), "templates")
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
                                autoescape = True)
 
-def get_posts(limit, offset):
-    page = db.GqlQuery("SELECT * FROM Post order by created desc limit 5 offset 5")
-
 class Post(db.Model):
     title = db.StringProperty(required = True)
     created= db.DateTimeProperty(auto_now_add = True)
     post = db.TextProperty(required = True)
-    #last_modified = db.DateTimeProperty(auto_now = True)
-
 
 class MainBlogHandler(webapp2.RequestHandler):
     def get(self):
@@ -50,7 +44,7 @@ class Handler(MainBlogHandler):
 class ViewPostHandler(MainBlogHandler):
     def renderError(self, error_code):
         self.error(error_code)
-        self.response.write("Oops! Something went wrong.")
+
     def get(self,id):
         post = Post.get_by_id(int(id))
         t = jinja_env.get_template("view.html")
